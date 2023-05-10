@@ -1,0 +1,36 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15
+    container_name: task_manager_postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    ### Uncomment two lines below if you need access to db from host
+    ### Choose different port left of : if you have postgres locally
+    # ports:
+    #   - 5432:5432
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+  task_manager:
+    build: 
+      dockerfile: Dockerfile.dev
+      context: .
+    container_name: task_manager
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 8000:8000
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    command: >
+      bash -c "./manage.py migrate && ./manage.py runserver 0.0.0.0:8000"
+volumes:
+  postgres_data:
